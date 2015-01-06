@@ -53,36 +53,34 @@
         (stp:append-child root elt)))
     (stp:make-document root)))
 
+(define-do-macro do-text-block-nodes ((node text-block &optional ret) &body body)
+  `(map-text-block-nodes
+    (lambda (,node)
+      ,@body)
+    ,text-block))
+
 (defun text-block-wc (text-block)
-  (let ((sum 0))
-    (map-text-block-nodes
-     (lambda (node)
-       (when (typep node 'stp:text)
-         (let ((data (stp:data node)))
-           (incf sum (wc data)))))
-     text-block)
-    sum))
+  (summing
+    (do-text-block-nodes (node text-block)
+      (when (typep node 'stp:text)
+        (let ((data (stp:data node)))
+          (sum (wc data)))))))
 
 (defun text-block-contains-any-p (text-block strings)
-  (block nil
-    (map-text-block-nodes
-     (lambda (node)
-       (and (typep node 'stp:text)
-            (let ((data (stp:data node)))
-              (some (lambda (string)
-                      (search (string string) data :test #'char-equal))
-                    strings))
-            (return t)))
-     text-block)))
+  (do-text-block-nodes (node text-block)
+    (and (typep node 'stp:text)
+         (let ((data (stp:data node)))
+           (some (lambda (string)
+                   (search (string string) data :test #'char-equal))
+                 strings))
+         (return t))))
 
 (defun text-block-text (text-block)
   (with-output-to-string (s)
-    (map-text-block-nodes
-     (lambda (node)
-       (when (typep node 'stp:text)
-         (write-string (stp:data node) s)
-         (write-char #\Space s)))
-     text-block)))
+    (do-text-block-nodes (node text-block)
+      (when (typep node 'stp:text)
+        (write-string (stp:data node) s)
+        (write-char #\Space s)))))
 
 (defun map-text-block-nodes (fn tb)
   (with-slots (nodes) tb
