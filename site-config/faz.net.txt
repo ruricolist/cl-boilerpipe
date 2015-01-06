@@ -1,0 +1,36 @@
+# Title
+title: //p[@class='Content HeadlineShort']
+
+# Authors
+# some are known and have a link, others don't
+author: substring-after(//span[@class='Autor'], 'Von')
+
+# Date
+date: //span[@class='Datum']
+
+# Body
+body: //div[@class='Artikel']
+
+# Removements before body text
+strip: //div[@class='Breadcrumbs']
+strip: //div[@class='QuickSearchBox']
+strip: //div[@class='FAZArtikelEinleitung']
+strip: //div[@class='FAZArtikelReiter']
+strip: //div[@class='clear']
+
+# General removements
+strip: //span[@class='Bildnachweis']
+strip: //img[@class='MediaIcon']
+strip: //div[@class='ArtikelMediaLink']
+dissolve: //a[img]
+
+# Removements after body text
+strip: //div[@class='ArtikelAbbinder']
+strip: //div[@class='ArtikelKommentieren Artikelfuss GETS;tk;boxen.top-lesermeinungen;tp;content']
+strip: //div[@class='FAZArtikelKommentare FAZArtikelContent']
+strip: //div[@class='FAZArtikelFunktionen']
+strip: //div[@id='FAZContentRight']
+
+# Fix picture captions
+wrap_in(small): //span[@class='Bildunterschrift']/text()
+test_url: http://www.faz.net/aktuell/feuilleton/zum-tod-von-margaret-thatcher-die-reizfigur-12141919.html#Drucken
