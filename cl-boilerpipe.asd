@@ -7,13 +7,10 @@
   :license "MIT"
   :depends-on (#:alexandria
                #:serapeum
-               #:anaphora
-               #:optima
+               #:cxml
                #:cxml-stp
-               #:xpath
-               #:puri
-               #:drakma
                #:css-selectors
+               #:cl-html5-parser
                #:html5-sax
                #:sax-sanitize)
   :components ((:file "package")

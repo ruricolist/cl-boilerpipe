@@ -1,3 +1,0 @@
-tidy: no
-
-test_url: http://www.newsweek.com/day-steve-mcqueen-met-his-new-nazi-neighbor-keith-moon-229741

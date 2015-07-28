@@ -4,6 +4,12 @@
 
 ;;; "cl-boilerpipe" goes here. Hacks and glory await!
 
+(deftype tag-class ()
+  '(member :unknown :ignorable :heading :inline :blockquote :list :pre :keep))
+
+(deftype node-class ()
+  '(member :boilerplate :content))
+
 (defclass text-block ()
   ((offset :initarg :offset :accessor offset)
    (nodes :initarg :nodes :accessor nodes)
@@ -38,8 +44,7 @@
     (loop for prev = empty then curr
           for (curr . rest) on text-blocks
           for next = (if rest (first rest) empty)
-          for class = (classify prev curr next)
-          if (eql class :content)
+          when (content? prev curr next)
             collect curr)))
 
 (defun blocks->document (text-blocks)
@@ -107,85 +112,67 @@
 (defvar *tag*)
 
 (defun document->text-blocks (document)
-  (let ((text-blocks '())
-        (offset -1)
-        (nodes '())
-        (*tag* "p"))
-    (flet ((flush ()
-             (push (make-instance 'text-block
-                                  :tag *tag*
-                                  :offset (incf offset)
-                                  :nodes (nreverse (shiftf nodes nil)))
-                   text-blocks))
-           (collect (node)
-             (stp:detach node)
-             (push node nodes)))
-      (labels ((rec (node)
-                 (dolist (node (stp:list-children node))
-                   (typecase node
-                     (stp:text
-                      (let ((data (stp:data node)))
-                        (when (and (> (length data) 1)
-                                   (notevery #'whitespacep data))
-                          (collect node))))
-                     (stp:element
-                      (unless (let ((class (stp:attribute-value node "class"))
-                                    (id (stp:attribute-value node "id")))
-                                (or (string*= "comment" id)
-                                    (ppcre:scan "comment|illegalstyle|hidden" class)))
-                        (let* ((tag (stp:local-name node))
-                               (class (classify-tag tag)))
-                          (case class
-                            (:ignorable)
-                            (:keep (collect node))
-                            (:inline
-                             (when (stp:list-children node)
-                               (collect node)))
-                            ((:heading :pre)
-                             (flush)
-                             (let ((*tag* tag))
-                               (rec node)
-                               (flush)))
-                            (:blockquote
-                              (flush)
-                              (let ((*tag* "blockquote"))
-                                (rec node)
-                                (flush)))
-                            (otherwise
-                             (flush)
-                             (rec node))))))))))
-        (rec (query1 "body" document))))
+  (local
+    (def text-blocks '())
+    (def offset -1)
+    (def nodes '())
+    (def *tag* "p")
+
+    (defun flush ()
+      (push (make-instance 'text-block
+                           :tag *tag*
+                           :offset (incf offset)
+                           :nodes (nreverse (shiftf nodes nil)))
+            text-blocks))
+    
+    (defun collect (node)
+      (stp:detach node)
+      (push node nodes))
+
+    (defun junk? (node)
+      (let ((class (stp:attribute-value node "class"))
+            (id (stp:attribute-value node "id")))
+        (or (string*= "comment" id)
+            (ppcre:scan "comment|illegalstyle|hidden" class))))
+
+    (defun rec (node)
+      (dolist (node (stp:list-children node))
+        (typecase node
+          (stp:text
+           (let ((data (stp:data node)))
+             (when (and (> (length data) 1)
+                        (notevery #'whitespacep data))
+               (collect node))))
+          (stp:element
+           (unless (junk? node)
+             (let ((tag (stp:local-name node)))
+               (ecase-of tag-class (classify-tag tag)
+                 (:ignorable)
+                 (:keep (collect node))
+                 (:inline
+                  (when (stp:list-children node)
+                    (collect node)))
+                 ((:heading :pre)
+                  (flush)
+                  (let ((*tag* tag))
+                    (rec node)
+                    (flush)))
+                 (:blockquote
+                   (flush)
+                   (let ((*tag* "blockquote"))
+                     (rec node)
+                     (flush)))
+                 ((:unknown :list)
+                  (flush)
+                  (rec node)))))))))
+
+    (rec (query1 "body" document))
+
     (nreverse
      (delete-if (lambda (text-block)
                   (or (zerop (text-density text-block))
                       (null (nodes text-block))))
                 text-blocks))))
-
-(defun simple-block-fusion (blocks)
-  (reduce
-   (lambda (x ys)
-     (match ys
-       ((list* y ys)
-        (if (= (text-density x)
-               (text-density y))
-            (cons (merge-text-blocks x y) ys)
-            (list* x y ys)))
-       (otherwise (cons x ys))))
-   blocks
-   :initial-value nil
-   :from-end t))
-
-(defun block-proximity-fusion (blocks)
-  (reduce
-   (lambda (x ys)
-     (match ys
-       ((list* y ys)
-        (if (= (1+ (offset x)) (offset y))
-            (cons (merge-text-blocks x y) ys)
-            (list* x y ys)))))
-   blocks
-   :from-end t
-   :initial-value nil))
 
 (defun classify-tag (lname)
   (string-case lname
@@ -201,7 +188,8 @@
     ("blockquote" :blockquote)
     (("ul" "ol") :list)
     ("pre" :pre)
-    (("img" "code" "br") :keep)))
+    (("img" "code" "br") :keep)
+    (t :unknown)))
 
 (defun classify (prev curr next)
   (if (<= (link-density curr) 0.333333)
@@ -218,6 +206,16 @@
               :boilerplate
               :content))
       :boilerplate))
+
+(defun content? (prev curr next)
+  (ecase-of node-class (classify prev curr next)
+    (:boilerplate nil)
+    (:content t)))
+
+(defun boilerplate? (prev curr next)
+  (ecase-of node-class (classify prev curr next)
+    (:boilerplate t)
+    (:content nil)))
 
 (defun compute-link-density (nodes)
   (let ((len 0)
@@ -241,26 +239,29 @@
     (t 0)))
 
 (defun compute-text-density (nodes &key (width 80))
-  (let ((col 0)
-        (lines -1)
-        (words 0))
-    (labels ((process-text (text)
-               ;; A restrictive idea of words.
-               (ppcre:do-scans (start end rs re "[a-zA-Z0-9]+" text)
-                 (incf words)
-                 (let ((len (- end start)))
-                   (when (> (incf col len) width)
-                     (incf lines 1)
-                     (setf col len)))))
-             (process-node (node)
-               (typecase node
-                 (stp:text (process-text (stp:data node)))
-                 (stp:element
-                  (stp:do-recursively (n node)
-                    (when (typep n 'stp:text)
-                      (process-text (stp:data n))))))))
+  (local
+    (def col 0)
+    (def lines -1)
+    (def words 0)
 
-      (dolist (node nodes)
-        (process-node node)))
+    (defun process-text (text)
+      ;; A restrictive idea of words.
+      (ppcre:do-scans (start end rs re "[a-zA-Z0-9]+" text)
+        (incf words)
+        (let ((len (- end start)))
+          (when (> (incf col len) width)
+            (incf lines 1)
+            (setf col len)))))
+
+    (defun process-node (node)
+      (typecase node
+        (stp:text (process-text (stp:data node)))
+        (stp:element
+         (stp:do-recursively (n node)
+           (when (typep n 'stp:text)
+             (process-text (stp:data n)))))))
+
+    (dolist (node nodes)
+      (process-node node))
 
     (/ words (float (max 1 lines)))))

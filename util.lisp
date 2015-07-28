@@ -1,8 +1,5 @@
 (in-package #:cl-boilerpipe)
 
-(defmacro query1 (query node)
-  `(car (css:query ,query ,node)))
-
 (defun count-matches (re text &key start end)
   (let ((sum 0))
     (ppcre:do-matches (s e re text nil :start start :end end)
