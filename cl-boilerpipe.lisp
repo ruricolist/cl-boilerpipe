@@ -198,7 +198,8 @@
               (if (<= (text-density next) 10)
                   (if (<= (text-density prev) 4)
                       :boilerplate
-                      :content))
+                      :content)
+                  :content)
               (if (zerop (text-density next))
                   :boilerplate
                   :content))
