@@ -36,6 +36,10 @@
       filter-blocks
       blocks->document))
 
+(defmethod strip-boilerplate/raw ((html fxml.stp:document))
+  (strip-boilerplate/raw
+   (fxml.stp:serialize html (stp:make-builder))))
+
 (defun strip-boilerplate (html)
   (stp:serialize (strip-boilerplate/raw html) (cxml:make-string-sink)))
 
