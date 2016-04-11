@@ -7,8 +7,13 @@
   :license "MIT"
   :depends-on (#:alexandria
                #:serapeum
-               #:cxml #:cxml-stp #:css-selectors
-               #:fxml #:fxml/stp #:fxml/cxml
+
+               #:cxml #:cxml-stp
+
+               #:fxml #:fxml/stp
+               #:fxml/cxml #:fxml/html5
+               #:fxml/css-selectors
+
                #:cl-html5-parser
                #:html5-sax
                #:sax-sanitize

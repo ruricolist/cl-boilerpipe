@@ -26,22 +26,22 @@
 
 (defmethod strip-boilerplate/raw ((html string))
   (~> html
-      (html5-parser:parse-html5)
-      (html5-sax:serialize-dom (stp:make-builder))
+      html5-parser:parse-html5
+      (fxml.html5:serialize-dom (fxml.stp:make-builder))
       strip-boilerplate/raw))
 
-(defmethod strip-boilerplate/raw ((html stp:document))
+(defmethod strip-boilerplate/raw ((html fxml.stp:document))
   (~> html
       document->text-blocks
       filter-blocks
       blocks->document))
 
-(defmethod strip-boilerplate/raw ((html fxml.stp:document))
+(defmethod strip-boilerplate/raw ((html stp:document))
   (strip-boilerplate/raw
-   (fxml.stp:serialize html (stp:make-builder))))
+   (stp:serialize html (fxml.stp:make-builder))))
 
 (defun strip-boilerplate (html)
-  (stp:serialize (strip-boilerplate/raw html) (cxml:make-string-sink)))
+  (fxml.stp:serialize (strip-boilerplate/raw html) (fxml:make-string-sink)))
 
 (defun filter-blocks (text-blocks)
   (let ((empty (make-instance 'text-block :offset -1)))
@@ -52,15 +52,15 @@
             collect curr)))
 
 (defun blocks->document (text-blocks)
-  (let ((root (stp:make-element "div")))
+  (let ((root (fxml.stp:make-element "div")))
     (dolist (tb text-blocks)
-      (let ((elt (stp:make-element (tag tb))))
-        (setf (stp:attribute-value elt "class") "text-block")
+      (let ((elt (fxml.stp:make-element (tag tb))))
+        (setf (fxml.stp:attribute-value elt "class") "text-block")
         (with-slots (nodes) tb
           (dolist (node nodes)
-            (stp:append-child elt node)))
-        (stp:append-child root elt)))
-    (stp:make-document root)))
+            (fxml.stp:append-child elt node)))
+        (fxml.stp:append-child root elt)))
+    (fxml.stp:make-document root)))
 
 (define-do-macro do-text-block-nodes ((node text-block &optional ret) &body body)
   `(map-text-block-nodes
@@ -71,14 +71,14 @@
 (defun text-block-wc (text-block)
   (summing
     (do-text-block-nodes (node text-block)
-      (when (typep node 'stp:text)
-        (let ((data (stp:data node)))
+      (when (typep node 'fxml.stp:text)
+        (let ((data (fxml.stp:data node)))
           (sum (wc data)))))))
 
 (defun text-block-contains-any-p (text-block strings)
   (do-text-block-nodes (node text-block)
-    (and (typep node 'stp:text)
-         (let ((data (stp:data node)))
+    (and (typep node 'fxml.stp:text)
+         (let ((data (fxml.stp:data node)))
            (some (lambda (string)
                    (search (string string) data :test #'char-equal))
                  strings))
@@ -87,14 +87,14 @@
 (defun text-block-text (text-block)
   (with-output-to-string (s)
     (do-text-block-nodes (node text-block)
-      (when (typep node 'stp:text)
-        (write-string (stp:data node) s)
+      (when (typep node 'fxml.stp:text)
+        (write-string (fxml.stp:data node) s)
         (write-char #\Space s)))))
 
 (defun map-text-block-nodes (fn tb)
   (with-slots (nodes) tb
     (dolist (node nodes)
-      (stp:do-recursively (node node)
+      (fxml.stp:do-recursively (node node)
         (funcall fn node)))))
 
 (defmethod initialize-instance :after ((self text-block) &key nodes)
@@ -130,31 +130,31 @@
             text-blocks))
     
     (defun collect (node)
-      (stp:detach node)
+      (fxml.stp:detach node)
       (push node nodes))
 
     (defun junk? (node)
-      (let ((class (stp:attribute-value node "class"))
-            (id (stp:attribute-value node "id")))
+      (let ((class (fxml.stp:attribute-value node "class"))
+            (id (fxml.stp:attribute-value node "id")))
         (or (string*= "comment" id)
             (ppcre:scan "comment|illegalstyle|hidden" class))))
 
     (defun rec (node)
-      (dolist (node (stp:list-children node))
+      (dolist (node (fxml.stp:list-children node))
         (typecase node
-          (stp:text
-           (let ((data (stp:data node)))
+          (fxml.stp:text
+           (let ((data (fxml.stp:data node)))
              (when (and (> (length data) 1)
                         (notevery #'whitespacep data))
                (collect node))))
-          (stp:element
+          (fxml.stp:element
            (unless (junk? node)
-             (let ((tag (stp:local-name node)))
+             (let ((tag (fxml.stp:local-name node)))
                (ecase-of tag-class (classify-tag tag)
                  (:ignorable)
                  (:keep (collect node))
                  (:inline
-                  (when (stp:list-children node)
+                  (when (fxml.stp:list-children node)
                     (collect node)))
                  ((:heading :pre)
                   (flush)
@@ -228,7 +228,7 @@
 
     (dolist (node nodes)
       (incf len (text-length node))
-      (unless (typep node 'stp:text)
+      (unless (typep node 'fxml.stp:text)
         (incf anchor-len (reduce #'+ (css:query "a" node) :key #'text-length))))
 
     (if (zerop len)
@@ -238,9 +238,9 @@
 (defun text-length (node)
   (typecase node
     (string (length node))
-    (stp:text (length (stp:data node)))
-    ((or stp:element stp:document)
-     (reduce #'+ (stp:list-children node) :key #'text-length))
+    (fxml.stp:text (length (fxml.stp:data node)))
+    ((or fxml.stp:element fxml.stp:document)
+     (reduce #'+ (fxml.stp:list-children node) :key #'text-length))
     (t 0)))
 
 (defun compute-text-density (nodes &key (width 80))
@@ -260,11 +260,11 @@
 
     (defun process-node (node)
       (typecase node
-        (stp:text (process-text (stp:data node)))
-        (stp:element
-         (stp:do-recursively (n node)
-           (when (typep n 'stp:text)
-             (process-text (stp:data n)))))))
+        (fxml.stp:text (process-text (fxml.stp:data node)))
+        (fxml.stp:element
+         (fxml.stp:do-recursively (n node)
+           (when (typep n 'fxml.stp:text)
+             (process-text (fxml.stp:data n)))))))
 
     (dolist (node nodes)
       (process-node node))
