@@ -11,7 +11,8 @@
                #:fxml #:fxml/stp #:fxml/cxml
                #:cl-html5-parser
                #:html5-sax
-               #:sax-sanitize)
+               #:sax-sanitize
+               #:anaphora)
   :components ((:file "package")
                (:file "util")
                (:file "sanitize")
