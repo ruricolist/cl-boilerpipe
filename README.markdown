@@ -11,13 +11,10 @@ here; I find that it works well enough.
 
 # Setup
 
-You will need [HTML5-SAX][] and [SAX-SANITIZE][], neither of which is
-in Quicklisp.
+You will need [FXML][].
 
     cd quicklisp/local-projects
-    git clone https://github.com/TBRSS/sax-sanitize.git
-    git clone https://github.com/TBRSS/html5-sax.git
-    git clone https://github.com/TBRSS/cl-boilerpipe.git
+    git clone https://github.com/TBRSS/FXML.git
 
     (ql:register-local-projects)
     (ql:quickload :cl-boilerpipe)
