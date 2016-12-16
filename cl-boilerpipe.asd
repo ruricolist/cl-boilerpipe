@@ -15,7 +15,6 @@
                #:fxml/css-selectors
 
                #:cl-html5-parser
-               #:html5-sax
                #:sax-sanitize
                #:anaphora)
   :components ((:file "package")

@@ -30,5 +30,4 @@ This returns the main content as another HTML string.
 [TBRSS]: https://tbrss.com
 [Boilerpipe]: https://github.com/kohlschutter/boilerpipe
 [paper]: http://www.l3s.de/~kohlschuetter/boilerplate/
-[HTML5-SAX]: https://github.com/TBRSS/html5-sax
 [SAX-SANITIZE]: https://github.com/TBRSS/sax-sanitize
