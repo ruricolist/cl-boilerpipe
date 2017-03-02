@@ -1,6 +1,6 @@
 (in-package #:cl-boilerpipe)
 
-(sax-sanitize:define-sanitize-mode article
+(fxml.sanitize:define-sanitize-mode article
   :elements ("a" "abbr" "acronym" "address" "area" "article" "aside" "audio"
                  "b" "big" "bdo" "blockquote" "br"
                  "caption" "center" "cite" "code" "col" "colgroup"
