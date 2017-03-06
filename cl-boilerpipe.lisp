@@ -115,12 +115,11 @@
 
 (defvar *tag*)
 
-(defun document->text-blocks (document)
+(defun document->text-blocks (document &aux (*tag* "p"))
   (local
     (def text-blocks '())
     (def offset -1)
     (def nodes '())
-    (def *tag* "p")
 
     (defun flush ()
       (push (make-instance 'text-block
