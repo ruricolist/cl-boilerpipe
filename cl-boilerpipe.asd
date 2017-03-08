@@ -8,8 +8,6 @@
   :depends-on (#:alexandria
                #:serapeum
 
-               #:cxml #:cxml-stp
-
                #:fxml #:fxml/stp
                #:fxml/cxml #:fxml/html5
                #:fxml/css-selectors
