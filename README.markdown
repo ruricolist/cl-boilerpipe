@@ -30,3 +30,4 @@ This returns the main content as another HTML string.
 [TBRSS]: https://tbrss.com
 [Boilerpipe]: https://github.com/kohlschutter/boilerpipe
 [paper]: http://www.l3s.de/~kohlschuetter/boilerplate/
+[FXML]: https://github.com/TBRSS/FXML
