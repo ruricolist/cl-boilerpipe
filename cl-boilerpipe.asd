@@ -10,6 +10,7 @@
 
                #:fxml #:fxml/stp
                #:fxml/cxml #:fxml/html5
+               #:cxml-stp
                #:fxml/css-selectors
                #:fxml/sanitize
 
